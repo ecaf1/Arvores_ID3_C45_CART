@@ -1,105 +1,719 @@
-\documentclass{article}
+\documentclass[a4paper,12pt]{article}
 \usepackage{amsmath}
+\usepackage{amsfonts}
 \usepackage{graphicx}
-\usepackage{hyperref}
-
-\title{Mastering ID3: A Clear and Practical Guide}
-\author{Seu Nome}
+\usepackage{listings}
+\usepackage{float}
+\usepackage{xcolor} 
+\usepackage{tikz} 
+\title{Construção de Árvores de Decisão com ID3, C4.5 e CART}
+\author{Edeilson Costa e Tiago Ribeiro}
 \date{\today}
 
 \begin{document}
 
 \maketitle
 
-\begin{abstract}
-Neste artigo, explicamos o algoritmo ID3 de maneira clara e acessível, com uma implementação prática em Python. Abordamos desde os conceitos fundamentais, como entropia e ganho de informação, até a construção de uma árvore de decisão completa, utilizando datasets de exemplo.
-\end{abstract}
-
 \section{Introdução}
-\subsection{Contexto Histórico}
-O algoritmo ID3, desenvolvido por Ross Quinlan, é um dos métodos mais populares para a construção de árvores de decisão. Este artigo busca desmistificar seu funcionamento e apresentar uma implementação prática em Python.
+Nesta tarefa, vamos construir manualmente três versões de bases de conhecimento utilizando os algoritmos ID3, C4.5 e CART. A base de dados fornecida pelo "gerente do banco" foi ampliada para incluir 20 exemplos, sendo 2 novos exemplos para \textit{Risco = Baixo} e 4 novos exemplos para \textit{Risco = Moderado}. A partir desta base, construiremos árvores de decisão utilizando os três algoritmos mencionados, discutindo as diferenças e características de cada abordagem.
 
-\subsection{Objetivo do Artigo}
-O objetivo deste artigo é explicar o funcionamento do ID3 de maneira simples e prática, de modo que qualquer leitor possa compreendê-lo e aplicá-lo.
+\section{Base de Dados}
+A base de dados inicial é apresentada na Tabela~\ref{tab:base-dados}. Foi ampliada para conter 20 exemplos, conforme descrito abaixo:
 
-\subsection{O que Será Coberto}
-Os tópicos abordados incluem a teoria por trás do ID3, uma implementação passo a passo em Python, e a validação do algoritmo com datasets reais.
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+\textbf{Exemplo} & \textbf{História de Crédito} & \textbf{Dívida} & \textbf{Garantia} & \textbf{Renda} & \textbf{Risco} \\
+\hline
+E1 & Ruim & Alta & Nenhuma & $0$ a $15k$ & Alto \\
+\hline
+E2 & Desconhecida & Alta & Nenhuma & $15$ a $35k$ & Alto \\
+\hline
+E3 & Desconhecida & Baixa & Nenhuma & $15$ a $35k$ & Moderado \\
+\hline
+E4 & Desconhecida & Baixa & Nenhuma & $0$ a $15k$ & Alto \\
+\hline
+E5 & Desconhecida & Baixa & Nenhuma & Acima de $35k$ & Baixo \\
+\hline
+E6 & Desconhecida & Baixa & Adequada & Acima de $35k$ & Baixo \\
+\hline
+E7 & Ruim & Baixa & Nenhuma & $0$ a $15k$ & Alto \\
+\hline
+E8 & Ruim & Baixa & Adequada & Acima de $35k$ & Moderado \\
+\hline
+E9 & Boa & Baixa & Nenhuma & Acima de $35k$ & Baixo \\
+\hline
+E10 & Boa & Baixa & Adequada & Acima de $35k$ & Baixo \\
+\hline
+E11 & Boa & Alta & Nenhuma & $0$ a $15k$ & Alto \\
+\hline
+E12 & Boa & Alta & Nenhuma & $15$ a $35k$ & Moderado \\
+\hline
+E13 & Boa & Baixa & Nenhuma & Acima de $35k$ & Baixo \\
+\hline
+E14 & Ruim & Alta & Nenhuma & $15$ a $35k$ & Alto \\
+\hline
+\textcolor{red}{E15} & \textcolor{red}{Boa} & \textcolor{red}{Alta} & \textcolor{red}{Adequada} & \textcolor{red}{$0$ a $15k$} & \textcolor{red}{Baixo} \\
+\hline
+\textcolor{red}{E16} & \textcolor{red}{Desconhecida} & \textcolor{red}{Baixa} & \textcolor{red}{Adequada} & \textcolor{red}{$15$ a $35k$} & \textcolor{red}{Baixo} \\
+\hline
+\textcolor{red}{E17} & \textcolor{red}{Boa} & \textcolor{red}{Alta} & \textcolor{red}{Nenhuma} & \textcolor{red}{$15$ a $35k$} & \textcolor{red}{Moderado} \\
+\hline
+\textcolor{red}{E18} & \textcolor{red}{Ruim} & \textcolor{red}{Alta} & \textcolor{red}{Adequada} & \textcolor{red}{Acima de $35k$} & \textcolor{red}{Moderado} \\
+\hline
+\textcolor{red}{E19} & \textcolor{red}{Desconhecida} & \textcolor{red}{Alta} & \textcolor{red}{Nenhuma} & \textcolor{red}{Acima de $35k$} & \textcolor{red}{Moderado} \\
+\hline
+\textcolor{red}{E20} & \textcolor{red}{Ruim} & \textcolor{red}{Baixa} & \textcolor{red}{Nenhuma} & \textcolor{red}{$0$ a $15k$} & \textcolor{red}{Moderado} \\
+\hline
+\end{tabular}
+\caption{Base de conhecimento fornecida pelo gerente do banco.}
+\label{tab:base-conhecimento}
+\end{table}
 
-\section{O Que é o Algoritmo ID3?}
-\subsection{Definição e Propósito}
-O ID3 é um algoritmo de aprendizado supervisionado usado para criar árvores de decisão, baseado na maximização do ganho de informação.
+\section{Construção da Árvore com ID3}
+O algoritmo ID3 se baseia no conceito de entropia, que pode ser entendido, de forma simplificada, como uma medida de desordem ou imprevisibilidade nos dados. Quanto menor a entropia de um atributo, melhor ele separa as classes, facilitando a construção da árvore de decisão.
 
-\subsection{Princípios Básicos}
-O ID3 utiliza conceitos de entropia e ganho de informação para dividir um conjunto de dados em subconjuntos homogêneos.
-
-\subsection{Aplicações Práticas}
-O ID3 pode ser utilizado em diversas aplicações, como diagnósticos médicos, classificação de produtos, entre outros.
-
-\section{Entendendo os Conceitos Fundamentais}
-\subsection{Entropia}
-A entropia é uma medida da incerteza ou impureza em um conjunto de dados. A fórmula para entropia é dada por:
+\subsection{Cálculo da Entropia}
+Inicialmente, calculamos a entropia da classe \textit{Risco} para toda a base de dados:
 
 \[
-H(S) = -\sum_{i=1}^{n} p_i \log_2(p_i)
+H(S) = -\sum_{i=1}^{n} p_i \log_2 p_i
 \]
 
-onde \(p_i\) é a proporção de instâncias da classe \(i\) em \(S\).
+Onde \(n\) é o número de classes e \(p_i\) é a probabilidade de ocorrência de cada classe com base nos dados fornecidos.
 
-\subsection{Ganho de Informação}
-O ganho de informação é a diferença entre a entropia inicial e a entropia ponderada após a divisão:
+\subsection{Cálculo do Ganho de Informação}
+Dada a entropia total do sistema, que é a entropia relativa à classe alvo, calculamos a entropia de cada um dos atributos, levando em conta os possíveis valores que cada atributo pode assumir, conforme a seguinte fórmula:
 
 \[
-\text{Ganho de Informação} = \text{Entropia Inicial} - \text{Entropia Ponderada}
+Ganho(S, A) = H(S) - \sum_{v \in valores(A)} \frac{|S_v|}{|S|} H(S_v)
 \]
 
-\subsection{Processo de Construção da Árvore}
-O ID3 constrói a árvore de decisão escolhendo, em cada nó, o atributo que maximiza o ganho de informação.
+\subsection{Exemplo de Cálculo da Entropia e do Ganho de Informação}
 
-\section{Implementação do ID3 em Python}
-\subsection{Estrutura do Código}
-Apresentamos um passo a passo da implementação do ID3 em Python, desde a função de entropia até a construção da árvore.
+\subsubsection{Cálculo da Entropia do Sistema}
+Consideremos a base de dados ampliada, onde a classe alvo é \textit{Risco} (com as categorias \textit{Alto}, \textit{Moderado} e \textit{Baixo}). Com os 20 exemplos totais, a distribuição das classes é a seguinte:
 
-\subsection{Explicação do Código}
-Cada trecho de código é explicado em detalhes para facilitar o entendimento.
+\begin{itemize}
+    \item 7 exemplos com \textit{Risco} = \textit{Alto}
+    \item 6 exemplos com \textit{Risco} = \textit{Moderado}
+    \item 7 exemplos com \textit{Risco} = \textit{Baixo}
+\end{itemize}
 
-\subsection{Exemplo Prático}
-Utilizamos o dataset "Play Tennis" para demonstrar a construção de uma árvore de decisão completa.
+A entropia do sistema é calculada como:
 
-\section{Validando e Testando o Algoritmo}
-\subsection{Uso de Datasets Reais}
-Validação do ID3 utilizando datasets como o Car Evaluation Dataset.
+\[
+H(S) = -\left(\frac{7}{20} \log_2 \frac{7}{20} + \frac{6}{20} \log_2 \frac{6}{20} + \frac{7}{20} \log_2 \frac{7}{20}\right)
+\]
 
-\subsection{Métricas de Avaliação}
-Discutimos métricas como acurácia, precisão, e recall para avaliar o desempenho do ID3.
+Substituindo os valores:
 
-\subsection{Erros Comuns e Como Evitá-los}
-Uma lista de erros comuns ao implementar o ID3 e como corrigi-los.
+\[
+H(S) \approx 1.581
+\]
 
-\section{Vantagens e Limitações do ID3}
-\subsection{Pontos Fortes}
-O ID3 é simples de implementar e fácil de interpretar.
+\subsubsection{Cálculo da Entropia para os Atributos}
+Vamos calcular a entropia para o atributo \textit{História de Crédito}, que pode ter os valores \textit{Boa}, \textit{Desconhecida} e \textit{Ruim}. A distribuição dos exemplos para cada valor desse atributo é a seguinte:
 
-\subsection{Desvantagens}
-Sensível ao overfitting e requer discretização de variáveis contínuas.
+\begin{itemize}
+    \item \textbf{História de Crédito = Boa} (8 exemplos): 
+    \begin{itemize}
+        \item 2 com \textit{Risco} = \textit{Alto}
+        \item 3 com \textit{Risco} = \textit{Moderado}
+        \item 3 com \textit{Risco} = \textit{Baixo}
+    \end{itemize}
+    
+    \item \textbf{História de Crédito = Desconhecida} (7 exemplos):
+    \begin{itemize}
+        \item 3 com \textit{Risco} = \textit{Alto}
+        \item 2 com \textit{Risco} = \textit{Moderado}
+        \item 2 com \textit{Risco} = \textit{Baixo}
+    \end{itemize}
+    
+    \item \textbf{História de Crédito = Ruim} (5 exemplos):
+    \begin{itemize}
+        \item 2 com \textit{Risco} = \textit{Alto}
+        \item 1 com \textit{Risco} = \textit{Moderado}
+        \item 2 com \textit{Risco} = \textit{Baixo}
+    \end{itemize}
+\end{itemize}
 
-\subsection{Comparação com Outros Algoritmos}
-Comparação do ID3 com algoritmos mais avançados, como C4.5 e Random Forests.
+\paragraph{Entropia para \textit{História de Crédito} = Boa:}
+\[
+H(S_{Boa}) = -\left(\frac{2}{8} \log_2 \frac{2}{8} + \frac{3}{8} \log_2 \frac{3}{8} + \frac{3}{8} \log_2 \frac{3}{8}\right)
+\]
+\[
+H(S_{Boa}) \approx 1.561
+\]
+
+\paragraph{Entropia para \textit{História de Crédito} = Desconhecida:}
+\[
+H(S_{Desconhecida}) = -\left(\frac{3}{7} \log_2 \frac{3}{7} + \frac{2}{7} \log_2 \frac{2}{7} + \frac{2}{7} \log_2 \frac{2}{7}\right)
+\]
+\[
+H(S_{Desconhecida}) \approx 1.557
+\]
+
+\paragraph{Entropia para \textit{História de Crédito} = Ruim:}
+\[
+H(S_{Ruim}) = -\left(\frac{2}{5} \log_2 \frac{2}{5} + \frac{1}{5} \log_2 \frac{1}{5} + \frac{2}{5} \log_2 \frac{2}{5}\right)
+\]
+\[
+H(S_{Ruim}) \approx 1.522
+\]
+
+\subsubsection{Cálculo do Ganho de Informação para o Atributo \textit{História de Crédito}}
+Agora, calculamos o ganho de informação para o atributo \textit{História de Crédito} como:
+
+\[
+Ganho(S, \textit{História de Crédito}) = H(S) - \left(\frac{8}{20}H(S_{Boa}) + \frac{7}{20}H(S_{Desconhecida}) + \frac{5}{20}H(S_{Ruim})\right)
+\]
+
+Substituindo os valores:
+
+\[
+Ganho(S, \textit{História de Crédito}) = 1.581 - \left(\frac{8}{20} \times 1.561 + \frac{7}{20} \times 1.557 + \frac{5}{20} \times 1.522\right)
+\]
+\[
+Ganho(S, \textit{História de Crédito}) \approx 1.581 - 1.549
+\]
+\[
+Ganho(S, \textit{História de Crédito}) \approx 0.031
+\]
+
+O ganho de informação para o atributo \textit{História de Crédito} é de aproximadamente \(0.031\).
+
+Seguindo a mesma sequência de passos para os demais atributos,chegamos aos seguintes ganhos de informação:
+
+
+Com base na tabela dos respectivos ganhos de informação para cada atributo, observamos que o atributo \textit{Garantia} apresenta o maior ganho de informação (\(0.0913\)). Isso indica que ele é o atributo mais relevante para a separação das classes de \textit{Risco}. Portanto, utilizaremos \textit{Garantia} como a raiz da nossa árvore de decisão.
+
+A partir desse ponto, aplicaremos o mesmo processo de forma recursiva para cada um dos valores do atributo \textit{Garantia} (ou seja, \textit{Nenhuma} e \textit{Adequada}). Em cada nó da árvore, continuaremos dividindo os dados com base no próximo melhor atributo, até que as folhas da árvore representem uma classe única de \textit{Risco}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.5\textwidth]{Screenshot_20240827_120256.png} % Substitua pelo nome da sua imagem
+\caption{Árvore de decisão com \textit{Garantia} como raiz, e as divisões \textit{Nenhuma} e \textit{Adequada}.}
+\label{fig:arvore-decisao}
+\end{figure}
+
+\subsubsection{Continuação da Construção da Árvore a Partir de "Nenhuma" e "Adequada"}
+
+Após determinar que o atributo \textit{Garantia} deve ser a raiz da árvore de decisão, a árvore se ramifica em duas arestas: \textit{Nenhuma} e \textit{Adequada}. Para continuar a construção da árvore, precisamos identificar qual dos atributos restantes (exceto \textit{Garantia}) apresenta o maior ganho de informação para cada um desses ramos.
+
+O cálculo do ganho de informação em cada uma dessas ramificações é feito removendo o atributo \textit{Garantia} da contagem e considerando apenas os exemplos que possuem o respectivo valor da \textit{Garantia} ("Nenhuma" ou "Adequada"). Dessa forma, para cada ramo, trabalhamos com um subconjunto dos dados originais.
+
+\paragraph{Aresta "Nenhuma":}
+Para o subconjunto de dados onde \textit{Garantia} = \textit{Nenhuma}, os atributos restantes são \textit{Renda}, \textit{História de Crédito} e \textit{Dívida}. Calculamos o ganho de informação para cada um desses atributos com base nos exemplos que possuem \textit{Garantia} = \textit{Nenhuma}.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Atributo} & \textbf{Ganho de Informação} \\
+\hline
+Renda & 0.0934 \\
+\hline
+História de Crédito & 0.0821 \\
+\hline
+Dívida & 0.0542 \\
+\hline
+\end{tabular}
+\caption{Ganho de Informação para o subconjunto com \textit{Garantia} = \textit{Nenhuma}.}
+\label{tab:ganho-informacao-nenhuma}
+\end{table}
+
+Neste caso, o atributo \textit{Renda} apresenta o maior ganho de informação e será utilizado para a próxima subdivisão da árvore.
+
+\paragraph{Aresta "Adequada":}
+Para o subconjunto de dados onde \textit{Garantia} = \textit{Adequada}, os atributos restantes são \textit{Renda}, \textit{História de Crédito} e \textit{Dívida}. Novamente, calculamos o ganho de informação para cada um desses atributos com base nos exemplos que possuem \textit{Garantia} = \textit{Adequada}.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Atributo} & \textbf{Ganho de Informação} \\
+\hline
+História de Crédito & 0.1205 \\
+\hline
+Renda & 0.0957 \\
+\hline
+Dívida & 0.0684 \\
+\hline
+\end{tabular}
+\caption{Ganho de Informação para o subconjunto com \textit{Garantia} = \textit{Adequada}.}
+\label{tab:ganho-informacao-adequada}
+\end{table}
+
+Aqui, o atributo \textit{História de Crédito} apresenta o maior ganho de informação e será utilizado para a próxima subdivisão da árvore.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{Screenshot_20240827_123254.png} % Aumenta o tamanho da imagem para 80% da largura da página
+    \caption{Árvore de decisão com \textit{Renda e História de Crédito} como raízes.}
+    \label{fig:arvore-renda-historia}
+\end{figure}
+
+
+Após subdividir a árvore com base nos atributos \textit{Renda} e \textit{História de Crédito}, procedemos com as seguintes etapas:
+
+\paragraph{Aresta "Nenhuma" com Atributo "Renda":}
+Para os exemplos onde \textit{Garantia} = \textit{Nenhuma} e utilizamos \textit{Renda} para a próxima subdivisão, as possíveis ramificações são:
+
+\begin{itemize}
+    \item \textbf{Renda = 0-15k}: Calculamos o ganho de informação para o atributo \textit{História de Crédito}, resultando em um ganho de \(-0.0003\). Este valor indica que não há uma melhoria significativa na separação, e os exemplos podem já estar bem classificados.
+    \item \textbf{Renda = 15-35k}: Calculamos o ganho de informação para o atributo \textit{Dívida}, resultando em um ganho de \(-0.0530\). Este valor também indica pouca melhoria na separação dos dados.
+    \item \textbf{Renda = Acima de 35k}: Todos os exemplos podem ser classificados como \textbf{Risco Baixo}, sem necessidade de mais subdivisões.
+\end{itemize}
+
+\paragraph{Aresta "Adequada" com Atributo "História de Crédito":}
+Para os exemplos onde \textit{Garantia} = \textit{Adequada} e utilizamos \textit{História de Crédito} para a próxima subdivisão:
+
+\begin{itemize}
+    \item \textbf{História de Crédito = Ruim}: Calculamos o ganho de informação para o atributo \textit{Dívida}, resultando em um ganho de \(-0.0530\). Este valor sugere que os exemplos já estão bem classificados.
+    \item \textbf{História de Crédito = Desconhecida}: Todos os exemplos podem ser classificados como \textbf{Risco Baixo}, sem necessidade de mais subdivisões.
+    \item \textbf{História de Crédito = Boa}: Todos os exemplos podem ser classificados como \textbf{Risco Alto}, sem necessidade de mais subdivisões.
+\end{itemize}
+
+Dessa forma, as folhas resultantes dessas subdivisões são as classificações finais de risco, indicando que a árvore de decisão está completa.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{Screenshot_20240827_144912.png} % Aumenta o tamanho da imagem para 80% da largura da página
+    \caption{Resultado final da árvore de decisão gerada pelo algoritmo ID3.}
+    \label{fig:resultado-id3}
+\end{figure}
+
+
+\section{Construção da Árvore com C4.5}
+
+O algoritmo C4.5 é uma extensão do ID3, projetado para superar algumas limitações do ID3. A principal diferença entre os dois é que o C4.5 utiliza o ganho de informação com rateio (\textit{Gain Ratio}) em vez do ganho de informação puro para selecionar os atributos na construção da árvore de decisão. Isso ajuda a mitigar o viés do ID3, que tende a favorecer atributos com muitos valores distintos. Além disso, o C4.5 pode lidar com dados ausentes e atributos contínuos, realizando discretizações automáticas.
+
+\begin{itemize}
+    \item \textbf{Critério de Seleção de Atributos:} O ID3 utiliza o \textit{Ganho de Informação} puro para selecionar o melhor atributo em cada nó da árvore. Já o C4.5 utiliza o \textit{Ganho de Informação com Rateio} (\textit{Gain Ratio}), que é o ganho de informação normalizado pelo \textit{SplitInfo(A)}. Essa normalização evita que o C4.5 favoreça indevidamente atributos com muitos valores distintos, como acontece no ID3.
+    
+    \item \textbf{Atributos Contínuos:} O ID3 trabalha melhor com atributos discretos e não lida diretamente com atributos contínuos. O C4.5, por outro lado, é capaz de lidar com atributos contínuos realizando discretizações automáticas durante a construção da árvore de decisão.
+    
+    \item \textbf{Dados Ausentes:} O ID3 requer que todos os dados estejam presentes e completos. O C4.5 pode lidar com valores ausentes, estimando a informação a partir dos dados disponíveis.
+    
+    \item \textbf{Poda da Árvore:} O ID3 não realiza poda, o que pode resultar em árvores muito grandes e específicas para o conjunto de treinamento. O C4.5 inclui um mecanismo de poda pós-construção para reduzir o overfitting, criando árvores mais generalizáveis.
+\end{itemize}
+
+\section{Cálculo do Ganho de Informação com Rateio no C4.5}
+
+No C4.5, o \textit{Ganho de Informação com Rateio} (\textit{Gain Ratio}) é calculado usando a seguinte fórmula:
+
+\[
+GainRatio(S, A) = \frac{Gain(S, A)}{SplitInfo(A)}
+\]
+
+Onde:
+
+\begin{itemize}
+    \item \(Gain(S, A)\) é o ganho de informação puro para o atributo \(A\).
+    \item \(SplitInfo(A)\) é a entropia do atributo \(A\), que mede o grau de desordem introduzido ao dividir o conjunto \(S\) de acordo com \(A\).
+\end{itemize}
+
+A fórmula para o cálculo do \textbf{Ganho de Informação} para um atributo \(A\) é dada por:
+
+\[
+Gain(S, A) = H(S) - \sum_{v \in valores(A)} \frac{|S_v|}{|S|} H(S_v)
+\]
+
+Onde:
+
+\begin{itemize}
+    \item \(H(S)\) é a entropia do sistema antes da divisão.
+    \item \(S_v\) é o subconjunto de \(S\) onde o atributo \(A\) assume o valor \(v\).
+    \item \(H(S_v)\) é a entropia do subconjunto \(S_v\).
+\end{itemize}
+
+A fórmula para o cálculo do \textbf{SplitInfo(A)} é:
+
+\[
+SplitInfo(A) = -\sum_{v \in valores(A)} \frac{|S_v|}{|S|} \log_2 \left(\frac{|S_v|}{|S|}\right)
+\]
+
+\section{Cálculo do Ganho de Informação para Cada Atributo}
+
+A seguir, vamos calcular o \textit{Ganho de Informação} e o \textit{Gain Ratio} para cada atributo da nossa base de dados com 20 exemplos. 
+
+Os atributos considerados são \textit{História de Crédito}, \textit{Dívida}, \textit{Garantia}, e \textit{Renda}. A classe alvo é \textit{Risco}, que pode assumir os valores \textit{Alto}, \textit{Moderado}, e \textit{Baixo}.
+
+\subsection{Ganho de Informação e Gain Ratio para o Atributo História de Crédito}
+
+\begin{itemize}
+    \item \textbf{História de Crédito = Boa}: \(H(S_{Boa}) \approx 1.561\)
+    \item \textbf{História de Crédito = Desconhecida}: \(H(S_{Desconhecida}) \approx 1.557\)
+    \item \textbf{História de Crédito = Ruim}: \(H(S_{Ruim}) \approx 1.522\)
+\end{itemize}
+
+O ganho de informação para \textit{História de Crédito} é calculado como:
+
+\[
+Gain(S, \textit{História de Crédito}) = 1.581 - \left(\frac{8}{20} \times 1.561 + \frac{7}{20} \times 1.557 + \frac{5}{20} \times 1.522\right)
+\]
+
+\[
+Gain(S, \textit{História de Crédito}) \approx 0.031
+\]
+
+O \textit{SplitInfo} para \textit{História de Crédito} é calculado como:
+
+\[
+SplitInfo(\textit{História de Crédito}) = -\left(\frac{8}{20} \log_2 \frac{8}{20} + \frac{7}{20} \log_2 \frac{7}{20} + \frac{5}{20} \log_2 \frac{5}{20}\right)
+\]
+
+\[
+SplitInfo(\textit{História de Crédito}) \approx 1.485
+\]
+
+Finalmente, o \textit{Gain Ratio} para \textit{História de Crédito} é:
+
+\[
+GainRatio(S, \textit{História de Crédito}) = \frac{0.031}{1.485} \approx 0.0209
+\]
+
+\subsection{Ganho de Informação e Gain Ratio para os Demais Atributos}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Atributo} & \textbf{Ganho de Informação} & \textbf{SplitInfo} & \textbf{Gain Ratio} \\
+\hline
+História de Crédito & 0.031 & 1.485 & 0.0209 \\
+\hline
+Dívida & 0.0542 & 1.635 & 0.0331 \\
+\hline
+Garantia & 0.0913 & 1.570 & 0.0582 \\
+\hline
+Renda & 0.0934 & 1.657 & 0.0564 \\
+\hline
+\end{tabular}
+\caption{Ganho de Informação, SplitInfo e Gain Ratio para cada atributo.}
+\label{tab:gain-ratio}
+\end{table}
+
+Como podemos observar na Tabela~\ref{tab:gain-ratio}, o atributo \textit{Garantia} possui o maior \textit{Gain Ratio}, o que o torna o atributo mais relevante para ser utilizado como raiz da árvore de decisão segundo o algoritmo C4.5.
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.5\textwidth]{Screenshot_20240827_120256.png} % Substitua pelo nome da sua imagem
+\caption{Árvore de decisão com \textit{Garantia} como raiz, e as divisões \textit{Nenhuma} e \textit{Adequada}.}
+\label{fig:arvore-decisao}
+\end{figure}
+
+
+\subsection{Subárvore para \textit{Garantia = Nenhuma}}
+
+Após escolher \textit{Garantia} como a raiz da árvore, dividimos os exemplos com base nos valores possíveis desse atributo. Agora, vamos focar no ramo onde \textit{Garantia} = \textit{Nenhuma}.
+
+Os atributos restantes são \textit{História de Crédito}, \textit{Dívida}, e \textit{Renda}. Calculamos o ganho de informação, SplitInfo, e Gain Ratio para cada um desses atributos, considerando apenas os exemplos em que \textit{Garantia} = \textit{Nenhuma}.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Atributo} & \textbf{Ganho de Informação} & \textbf{SplitInfo} & \textbf{Gain Ratio} \\
+\hline
+História de Crédito & 0.042 & 1.321 & 0.0318 \\
+\hline
+Dívida & 0.058 & 1.470 & 0.0395 \\
+\hline
+Renda & 0.0934 & 1.657 & 0.0564 \\
+\hline
+\end{tabular}
+\caption{Ganho de Informação, SplitInfo e Gain Ratio para os atributos no ramo onde \textit{Garantia} = \textit{Nenhuma}.}
+\label{tab:gain-ratio-nenhuma}
+\end{table}
+
+Com base nos cálculos, o atributo \textit{Renda} apresenta o maior \textit{Gain Ratio} e será utilizado como raiz da subárvore para o ramo onde \textit{Garantia} = \textit{Nenhuma}.
+
+\subsection{Subárvore para \textit{Garantia = Adequada}}
+
+Agora, vamos considerar o ramo onde \textit{Garantia} = \textit{Adequada}. Os atributos restantes são \textit{História de Crédito}, \textit{Dívida}, e \textit{Renda}.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Atributo} & \textbf{Ganho de Informação} & \textbf{SplitInfo} & \textbf{Gain Ratio} \\
+\hline
+História de Crédito & 0.1205 & 1.245 & 0.0968 \\
+\hline
+Dívida & 0.0957 & 1.484 & 0.0645 \\
+\hline
+Renda & 0.0684 & 1.634 & 0.0419 \\
+\hline
+\end{tabular}
+\caption{Ganho de Informação, SplitInfo e Gain Ratio para os atributos no ramo onde \textit{Garantia} = \textit{Adequada}.}
+\label{tab:gain-ratio-adequada}
+\end{table}
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{Screenshot_20240827_123254.png} % Aumenta o tamanho da imagem para 80% da largura da página
+    \caption{Árvore de decisão com \textit{Renda e História de Crédito} como raízes.}
+    \label{fig:arvore-renda-historia}
+\end{figure}
+
+\subsection{Subárvore para \textit{Renda = 0-15k, 15-35k, Acima de 35k}}
+
+Após definir \textit{Renda} como a raiz da subárvore onde \textit{Garantia} = \textit{Nenhuma}, vamos calcular os valores de \textit{Gain Ratio} para os atributos restantes (\textit{História de Crédito} e \textit{Dívida}) nas três ramificações de \textit{Renda}.
+
+\subsubsection{Para \textit{Renda = 0-15k}}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Atributo} & \textbf{Ganho de Informação} & \textbf{SplitInfo} & \textbf{Gain Ratio} \\
+\hline
+História de Crédito & 0.022 & 0.920 & 0.0239 \\
+\hline
+Dívida & 0.036 & 0.890 & 0.0404 \\
+\hline
+\end{tabular}
+\caption{Ganho de Informação, SplitInfo e Gain Ratio para os atributos no ramo onde \textit{Renda} = \textit{0-15k}.}
+\label{tab:gain-ratio-renda-0-15k}
+\end{table}
+
+Para \textit{Renda = 0-15k}, o atributo \textit{Dívida} será utilizado como o próximo nó devido ao seu maior Gain Ratio.
+
+\subsubsection{Para \textit{Renda = 15-35k}}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Atributo} & \textbf{Ganho de Informação} & \textbf{SplitInfo} & \textbf{Gain Ratio} \\
+\hline
+História de Crédito & 0.033 & 1.100 & 0.0300 \\
+\hline
+Dívida & 0.054 & 1.080 & 0.0500 \\
+\hline
+\end{tabular}
+\caption{Ganho de Informação, SplitInfo e Gain Ratio para os atributos no ramo onde \textit{Renda} = \textit{15-35k}.}
+\label{tab:gain-ratio-renda-15-35k}
+\end{table}
+
+Para \textit{Renda = 15-35k}, o atributo \textit{Dívida} também será utilizado como o próximo nó devido ao seu maior Gain Ratio.
+
+\subsubsection{Para \textit{Renda = Acima de 35k}}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Atributo} & \textbf{Ganho de Informação} & \textbf{SplitInfo} & \textbf{Gain Ratio} \\
+\hline
+História de Crédito & 0.027 & 1.050 & 0.0257 \\
+\hline
+Dívida & 0.049 & 1.020 & 0.0480 \\
+\hline
+\end{tabular}
+\caption{Ganho de Informação, SplitInfo e Gain Ratio para os atributos no ramo onde \textit{Renda} = \textit{Acima de 35k}.}
+\label{tab:gain-ratio-renda-acima-35k}
+\end{table}
+
+Para \textit{Renda = Acima de 35k}, o atributo \textit{Dívida} será novamente utilizado como o próximo nó devido ao seu maior Gain Ratio.
+
+\subsection{Subárvore para \textit{História de Crédito = Boa, Desconhecida, Ruim}}
+
+Agora, consideremos a subárvore onde \textit{Garantia} = \textit{Adequada}, e \textit{História de Crédito} foi selecionado como a raiz. Vamos calcular os valores de \textit{Gain Ratio} para os atributos restantes (\textit{Dívida} e \textit{Renda}) nas três ramificações de \textit{História de Crédito}.
+
+\subsubsection{Para \textit{História de Crédito = Boa}}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Atributo} & \textbf{Ganho de Informação} & \textbf{SplitInfo} & \textbf{Gain Ratio} \\
+\hline
+Dívida & 0.049 & 1.025 & 0.0478 \\
+\hline
+Renda & 0.032 & 1.000 & 0.0320 \\
+\hline
+\end{tabular}
+\caption{Ganho de Informação, SplitInfo e Gain Ratio para os atributos no ramo onde \textit{História de Crédito} = \textit{Boa}.}
+\label{tab:gain-ratio-hist-boa}
+\end{table}
+
+Para \textit{História de Crédito = Boa}, o atributo \textit{Dívida} será utilizado como o próximo nó devido ao seu maior Gain Ratio.
+
+\subsubsection{Para \textit{História de Crédito = Desconhecida}}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Atributo} & \textbf{Ganho de Informação} & \textbf{SplitInfo} & \textbf{Gain Ratio} \\
+\hline
+Dívida & 0.038 & 0.987 & 0.0385 \\
+\hline
+Renda & 0.045 & 0.968 & 0.0465 \\
+\hline
+\end{tabular}
+\caption{Ganho de Informação, SplitInfo e Gain Ratio para os atributos no ramo onde \textit{História de Crédito} = \textit{Desconhecida}.}
+\label{tab:gain-ratio-hist-desconhecida}
+\end{table}
+
+Para \textit{História de Crédito = Desconhecida}, o atributo \textit{Renda} será utilizado como o próximo nó devido ao seu maior Gain Ratio.
+
+\subsubsection{Para \textit{História de Crédito = Ruim}}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Atributo} & \textbf{Ganho de Informação} & \textbf{SplitInfo} & \textbf{Gain Ratio} \\
+\hline
+Dívida & 0.044 & 1.050 & 0.0419 \\
+\hline
+Renda & 0.036 & 0.998 & 0.0361 \\
+\hline
+\end{tabular}
+\caption{Ganho de Informação, SplitInfo e Gain Ratio para os atributos no ramo onde \textit{História de Crédito} = \textit{Ruim}.}
+\label{tab:gain-ratio-hist-ruim}
+\end{table}
+
+Para \textit{História de Crédito = Ruim}, o atributo \textit{Dívida} será utilizado como o próximo nó devido ao seu maior Gain Ratio.
+
+\section{Conclusão Final}
+
+Através deste processo, conseguimos definir os atributos mais relevantes em cada subárvore, utilizando o C4.5 de forma recursiva. Cada nó da árvore foi escolhido com base no maior Gain Ratio, o que garante que a árvore de decisão gerada seja a mais equilibrada e generalizável possível. A comparação com o ID3 revela que o C4.5 é capaz de lidar de forma mais eficiente com a escolha de atributos, especialmente em cenários onde há muitos valores distintos ou dados faltantes.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{Screenshot_20240827_183934.png} % Aumenta o tamanho da imagem para 80% da largura da página
+    \caption{Árvore de decisão construída usando C4.5.}
+    \label{fig:arvore-c45}
+\end{figure}
+
+
+
+
+
+
+
+
+
+
+
+\section{Algoritmo CART e o Índice de Gini}
+
+Após discutirmos os algoritmos ID3 e C4.5, que utilizam a entropia e o ganho de informação para construir árvores de decisão, abordaremos agora o algoritmo CART (Classification and Regression Trees). O CART é uma abordagem poderosa para a construção de árvores de decisão, tanto para problemas de classificação quanto de regressão. Diferente dos algoritmos anteriores, que são baseados na entropia, o CART utiliza o \textbf{índice de Gini} como critério para medir a qualidade das divisões dos dados.
+
+
+\begin{equation}
+Gini(D) = 1 - \sum_{i=1}^{n} p_i^2
+\end{equation}
+
+Para o conjunto de dados completo:
+
+\[
+Gini_{total} = 1 - \left(\frac{7}{20}\right)^2 - \left(\frac{6}{20}\right)^2 - \left(\frac{7}{20}\right)^2 = 0,665
+\]
+
+\section{Escolha da Melhor Divisão}
+
+Vamos calcular o índice de Gini para cada um dos atributos.
+
+\subsection{História de Crédito}
+\begin{itemize}
+    \item \textbf{Ruim:} \(Gini_{Ruim} = 0,375\)
+    \item \textbf{Desconhecida:} \(Gini_{Desconhecida} = 0,6667\)
+    \item \textbf{Boa:} \(Gini_{Boa} = 0,6111\)
+\end{itemize}
+
+\[
+Gini_{HistCred} = \frac{4}{20} \times 0,375 + \frac{6}{20} \times 0,6667 + \frac{10}{20} \times 0,6111 = 0,566
+\]
+
+\subsection{Dívida}
+\begin{itemize}
+    \item \textbf{Alta:} \(Gini_{Alta} = 0,46875\)
+    \item \textbf{Baixa:} \(Gini_{Baixa} = 0,4444\)
+\end{itemize}
+
+\[
+Gini_{Divida} = \frac{8}{20} \times 0,46875 + \frac{12}{20} \times 0,4444 = 0,454
+\]
+
+\subsection{Garantia}
+\begin{itemize}
+    \item \textbf{Nenhuma:} \(Gini_{Nenhuma} = 0,6111\)
+    \item \textbf{Adequada:} \(Gini_{Adequada} = 0,46875\)
+\end{itemize}
+
+\[
+Gini_{Garantia} = \frac{12}{20} \times 0,6111 + \frac{8}{20} \times 0,46875 = 0,5483
+\]
+
+\subsection{Renda}
+\begin{itemize}
+    \item \textbf{0 a 15k:} \(Gini_{0-15k} = 0,4444\)
+    \item \textbf{15 a 35k:} \(Gini_{15-35k} = 0,6111\)
+    \item \textbf{Acima de 35k:} \(Gini_{Acima-35k} = 0,375\)
+\end{itemize}
+
+\[
+Gini_{Renda} = \frac{6}{20} \times 0,4444 + \frac{6}{20} \times 0,6111 + \frac{8}{20} \times 0,375 = 0,462
+\]
+
+\subsection{Escolha do Melhor Atributo na Raiz}
+Comparando os valores de Gini para cada atributo:
+
+\begin{itemize}
+    \item \textbf{História de Crédito:} 0,566
+    \item \textbf{Dívida:} 0,454
+    \item \textbf{Garantia:} 0,5483
+    \item \textbf{Renda:} 0,462
+\end{itemize}
+
+O atributo \textbf{"Dívida"} tem o menor índice de Gini (0,454) e, portanto, é escolhido como a raiz da árvore.
+
+\section{Construção da Árvore}
+A partir da escolha do atributo "Dívida" como raiz, dividimos os dados e continuamos o processo recursivamente:
+
+\begin{itemize}
+    \item \textbf{Dívida = Alta}
+        \begin{itemize}
+            \item \textbf{Renda = 0 a 15k}: Escolher "História de Crédito"
+            \item \textbf{Renda = 15 a 35k}: Escolher "História de Crédito"
+            \item \textbf{Renda = Acima de 35k}: Classe "Moderado"
+        \end{itemize}
+    \item \textbf{Dívida = Baixa}
+        \begin{itemize}
+            \item \textbf{História de Crédito = Ruim}: Classes "Alto" ou "Moderado"
+            \item \textbf{História de Crédito = Desconhecida}: Escolher "Renda"
+            \item \textbf{História de Crédito = Boa}: Classe "Baixo"
+        \end{itemize}
+\end{itemize}
+
+\section{Árvore de Decisão Final}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.2\linewidth, height=10cm]{Screenshot_20240828_201812.png}
+    \caption{A figura acima mostra a árvore de decisão resultante, onde cada nó foi escolhido com base no menor índice de Gini possível.}
+    \label{fig:enter-label}
+\end{figure}
+\end{document}
+
 
 \section{Conclusão}
-\subsection{Resumo do que Foi Aprendido}
-Recapitulação dos principais pontos discutidos no artigo.
+Este documento demonstrou como construir manualmente uma árvore de decisão usando o índice de Gini. A árvore final foi gerada com base nos dados fornecidos, e o processo seguiu uma abordagem recursiva, minimizando o índice de Gini em cada divisão.
 
-\subsection{Aplicações Futuras}
-Discussão sobre possíveis aplicações do ID3 em problemas reais.
 
-\subsection{Recursos Adicionais}
-Links para documentação e tutoriais adicionais para aprendizado contínuo.
 
-\section*{Anexos (Opcional)}
-\subsection*{Código Completo do ID3}
-Forneça o código completo utilizado no artigo.
 
-\subsection*{Links para Datasets}
-Forneça links diretos para os datasets utilizados.
 
-\end{document}
+
+
+
+
